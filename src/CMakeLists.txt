@@ -4,9 +4,15 @@ Project(truetypetracer)
  
 # this figures out the Python include directories and adds them to the
 # header file search path
+
+if (APPLE)
+    set(sed_EXTRE "-E")
+else()
+    set(sed_EXTRE "-r")
+endif()
 execute_process(
     COMMAND python-config --includes
-    COMMAND sed -r "s/-I//g; s/ +/;/g"
+    COMMAND sed ${sed_EXTRE} "s/-I//g; s/ +/;/g"
     COMMAND tr -d '\n'
     OUTPUT_VARIABLE Python_Includes
 )
@@ -57,15 +63,20 @@ set(TTT_INCLUDE_FILES
 
 ########################################################################
 # this makes the Python module
+if (APPLE)
+    set(lib_TYPE "SHARED")
+else()
+    set(lib_TYPE "MODULE")
+endif()
 add_library(
     truetypetracer
-    MODULE
+    ${lib_TYPE}
     ${TTT_SRC_FILES}
     ttt_py.cpp # the boost-python bindings are here.
 )
 
 set_target_properties(truetypetracer PROPERTIES PREFIX "") 
-set_target_properties(truetypetracer PROPERTIES VERSION ${MY_VERSION}) 
+#set_target_properties(truetypetracer PROPERTIES VERSION ${MY_VERSION}) 
 target_link_libraries(truetypetracer ${Boost_LIBRARIES} ${FREETYPE_LIBRARY}) 
 
 #
