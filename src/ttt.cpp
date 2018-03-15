@@ -6,13 +6,14 @@
 
 #include "ttt.hpp"
 
-void handle_ft_error(std::string where, int f, int x) {
+void handle_ft_error(std::string where, int f, int x)
+{
     const struct ftError *e = &ft_errors[0];
     for(;e->err_msg && e->err_code != f;e++) ;
     if(e->err_msg) {
-        fprintf(stderr, "Fatal error in %s: %s (%d) at line:%d\n", where.data() , e->err_msg, f, x);
+        fprintf(stderr, "Fatal error in %s: %s (%d) at line:%d\n", where.data(), e->err_msg, f, x);
     } else {
-        fprintf(stderr, "Fatal error in %s: %d at line:%d\n", where.data() , f,x);
+        fprintf(stderr, "Fatal error in %s: %d at line:%d\n", where.data(), f, x);
     }
     exit(x);
 }
@@ -28,29 +29,29 @@ Ttt::Ttt(Writer* wr, std::string str, int unicode , std::string ttfont )
     int linescale = 0;
     previous = false; // no previous char, for kerning
     previous_glyph_index = 0; // no index, for kerning
-    
+
     error = FT_Init_FreeType(&library);
     if(error) handle_ft_error("FT_Init_FreeType" , error, __LINE__);
 
     error = FT_New_Face(library, ttfont.data() , 0, &face);
     if(error) handle_ft_error("FT_New_Face", error, __LINE__);
-    
+
     #define MYFSIZE 64
-    error = FT_Set_Pixel_Sizes(face, 0, MYFSIZE);     
+    error = FT_Set_Pixel_Sizes(face, 0, MYFSIZE);
     if (error) handle_ft_error("FT_Set_Pixel_Sizes", error, __LINE__);
 
     if (unicode) setlocale(LC_CTYPE, "");
 
     // this redirects to the buffer
     cout_redirect redir( buffer.rdbuf() );
-    
+
     int l = str.length();
-    
+
     my_writer->preamble();
-    
+
     line_extents.reset();
     long int offset = 0;
-    const char* s = str.data();    
+    const char* s = str.data();
     while(*s ) { // loop through characters
         wchar_t wc;
         int r = mbtowc(&wc, s, l); // convert multibyte s, store in wc. return number of converted bytes
@@ -62,6 +63,7 @@ Ttt::Ttt(Writer* wr, std::string str, int unicode , std::string ttfont )
         s += r; l -= r;
         my_writer->end_glyph(glyph_extents, advance); // comment at end of glyph
     }
+
     my_writer->set_extents(line_extents);
     my_writer->postamble(offset, line_extents);
 }
@@ -76,13 +78,13 @@ long int Ttt::render_char(FT_Face face, wchar_t c, long int offset, int linescal
     error = FT_Set_Pixel_Sizes(face, 4096, linescale ? linescale : 64); if(error) handle_ft_error("FT_Set_Pixel_Sizes", error, __LINE__);
     /* lookup glyph */
     glyph_index = FT_Get_Char_Index(face, (FT_ULong)c); if(!glyph_index) handle_ft_error("FT_Get_Char_Index", 0, __LINE__);
-    
+
     /* load glyph */
     error = FT_Load_Glyph(face, glyph_index, FT_LOAD_NO_BITMAP | FT_LOAD_NO_HINTING); if(error) handle_ft_error("FT_Load_Glyph", error, __LINE__);
     error = FT_Render_Glyph(face->glyph, FT_RENDER_MODE_MONO); if(error) handle_ft_error("FT_Render_Glyph", error, __LINE__);
-    
+
     if(linescale > 0) // this is for the "zigzag" fill of letters?
-        my_draw_bitmap(&face->glyph->bitmap, 
+        my_draw_bitmap(&face->glyph->bitmap,
                        face->glyph->bitmap_left + offset,
                        face->glyph->bitmap_top,
                        linescale);
@@ -110,34 +112,34 @@ long int Ttt::render_char(FT_Face face, wchar_t c, long int offset, int linescal
     /* save advance in a global */
     advance.x = face->glyph->advance.x;
     advance.y = face->glyph->advance.y;
-    
+
     /*
     FT_Bool use_kerning = FT_HAS_KERNING( face );
     std::cout << " not using kerning \n";
     if ( use_kerning && previous ) {
         FT_Vector kerning;
-        error = FT_Get_Kerning( face, // handle to face object  
-                                previous_glyph_index, // left glyph index  
-                                glyph_index, // right glyph index  
+        error = FT_Get_Kerning( face, // handle to face object
+                                previous_glyph_index, // left glyph index
+                                glyph_index, // right glyph index
                                 FT_KERNING_DEFAULT, // kerning mode   FT_KERNING_DEFAULT , FT_KERNING_UNFITTED , FT_KERNING_UNSCALED
                                 &kerning ); // target vector
         std::cout << " kerning x-advance: " << kerning.x << "\n";
     }
     */
     /*
-    FT_Vector kerning; 
-    error = FT_Get_Kerning( face, // handle to face object  
-                            left, // left glyph index  
-                            right, // right glyph index  
+    FT_Vector kerning;
+    error = FT_Get_Kerning( face, // handle to face object
+                            left, // left glyph index
+                            right, // right glyph index
                             kerning_mode, // kerning mode   FT_KERNING_DEFAULT , FT_KERNING_UNFITTED , FT_KERNING_UNSCALED
-                            &kerning ); // target vector 
+                            &kerning ); // target vector
     */
-    
+
     // delete glyph with FT_Done_Glyph?
-    
+
     previous = true; // we have a prev glyph, for kerning
-    previous_glyph_index = glyph_index; 
-    
+    previous_glyph_index = glyph_index;
+
     /* offset will get bumped up by the x size of the char just plotted */
     return face->glyph->advance.x;
 }
@@ -151,7 +153,7 @@ void Ttt::my_draw_bitmap(FT_Bitmap *b, FT_Int x, FT_Int y, int linescale) {
     int spans = 0;
     int pitch = abs(b->pitch);
     static int odd=0; //?
-    
+
     for(FT_Int j = 0; j < b->rows; j++) {
         FT_Vector v;
         oldbit = 0;
@@ -196,7 +198,7 @@ void Ttt::my_draw_bitmap(FT_Bitmap *b, FT_Int x, FT_Int y, int linescale) {
     }
 }
 
-// move with 'pen up' to a new position and then put 'pen down' 
+// move with 'pen up' to a new position and then put 'pen down'
 int Ttt::my_move_to( const FT_Vector* to, void* user ) {
     P pt(to);
     my_writer->move_to( pt );
@@ -229,7 +231,7 @@ int Ttt::my_conic_to( const FT_Vector* control, const FT_Vector* to, void* user 
     return 0;
 }
 
-// calculate and return the length and extents of a conic 
+// calculate and return the length and extents of a conic
 // FIXME: is hard-coded csteps=10 good? should it be adjustable?
 std::pair<double,extents> Ttt::conic_length(const FT_Vector* control, const FT_Vector* to) {
     FT_Vector point=last_point;
@@ -256,9 +258,9 @@ int Ttt::my_conic_as_biarcs( const FT_Vector* control, const FT_Vector* to, void
     extents ext;
     boost::tie(len,ext) = conic_length(control,to);
     glyph_extents.add_extents(ext);
-    double dsteps = my_writer->get_conic_biarc_subdiv(); //200; 
+    double dsteps = my_writer->get_conic_biarc_subdiv(); //200;
     int steps = (int) std::max( (double)2, (double)len/(double)dsteps); // number of biarcs, minimum two
-    
+
     P p0( &last_point );
     P p1( control );
     P p2( to );
@@ -270,8 +272,8 @@ int Ttt::my_conic_as_biarcs( const FT_Vector* control, const FT_Vector* to, void
         double tf = (double)ti/(double)steps;
         double t1 = 1-tf;
         P p = p0*SQ(t1) + p1*(2*tf*t1) + p2*SQ(tf);
-        P t = q0*(t1) + q1*(tf); 
-        biarc(ps, ts, p, t, 1.0); 
+        P t = q0*(t1) + q1*(tf);
+        biarc(ps, ts, p, t, 1.0);
         ps = p; ts = t;
     }
 
@@ -281,9 +283,9 @@ int Ttt::my_conic_as_biarcs( const FT_Vector* control, const FT_Vector* to, void
 
 // approximate a second order curve from current pos to 'to' using control, as line-segments
 // The Quadratic Bézier curve is
-// B(t) = (1 - t)^2A + 2t(1 - t)B + t^2C,  t in [0,1]. 
+// B(t) = (1 - t)^2A + 2t(1 - t)B + t^2C,  t in [0,1].
 // FIXME: make hard-coded dsteps=200 adjustable (a property of Writer?)
-int Ttt::my_conic_as_lines(const FT_Vector* control, const  FT_Vector* to, void* user ) {        
+int Ttt::my_conic_as_lines(const FT_Vector* control, const  FT_Vector* to, void* user ) {
     double len;
     extents ext;
     boost::tie(len,ext) = conic_length(control,to);
@@ -315,7 +317,7 @@ int Ttt::my_cubic_to(const FT_Vector* control1, const FT_Vector* control2, const
 
 // calculate the arc-length and extents of a cubic
 // FIXME: is the hard-coded csteps=10 sufficient? optimal?
-std::pair<double, extents> Ttt::cubic_length(const FT_Vector* control1, 
+std::pair<double, extents> Ttt::cubic_length(const FT_Vector* control1,
                          const FT_Vector* control2,
                          const FT_Vector* to) {
     FT_Vector point=last_point;
@@ -325,13 +327,13 @@ std::pair<double, extents> Ttt::cubic_length(const FT_Vector* control1,
     // in the gcode and the number of polyline control points for dxf code.
     int csteps=10; // fixme: get this value from the Writer
 
-    for(int t=1; t<=csteps; t++) { 
+    for(int t=1; t<=csteps; t++) {
         double tf = (double)t/(double)csteps; // t in [0, 1]
-        double x = CUBE(1-tf)*last_point.x     + 
+        double x = CUBE(1-tf)*last_point.x     +
             SQ(1-tf)*3*tf*control1->x   +
             SQ(tf)*(1-tf)*3*control2->x +
             CUBE(tf)*to->x;
-        double y = CUBE(1-tf)*last_point.y     + 
+        double y = CUBE(1-tf)*last_point.y     +
             SQ(1-tf)*3*tf*control1->y   +
             SQ(tf)*(1-tf)*3*control2->y +
             CUBE(tf)*to->y;
@@ -346,14 +348,14 @@ std::pair<double, extents> Ttt::cubic_length(const FT_Vector* control1,
 // dispatch to this func if writer doesn't have native cubics
 // instead of a single cubic, output many arcs
 // FIXME: make the number of arcs adjustabe (a property of Writer?)
-int Ttt::my_cubic_as_biarcs(const FT_Vector* control1, 
-                           const FT_Vector* control2, 
+int Ttt::my_cubic_as_biarcs(const FT_Vector* control1,
+                           const FT_Vector* control2,
                            const FT_Vector *to, void* user) {
     double len;
     extents ext;
     boost::tie(len,ext) = cubic_length(control1,control2,to);
     glyph_extents.add_extents(ext);
-    
+
     // define the subdivision of curves into arcs: approximate curve length
     // in font coordinates to get one arc pair (minimum of two arc pairs
     // per curve)
@@ -376,35 +378,35 @@ int Ttt::my_cubic_as_biarcs(const FT_Vector* control1,
         P p = p0*CUBE(t1) + p1*3*tf*SQ(t1) + p2*3*SQ(tf)*t1 + p3*CUBE(tf) ;
         P t = q0*SQ(t1) + q1*2*tf*t1 + q2*SQ(tf);
         biarc(ps, ts, p, t, 1.0); // output many biarcs instead.
-        ps = p; 
+        ps = p;
         ts = t;
     }
-    last_point = *to; 
+    last_point = *to;
     return 0;
 }
 
 // draw a cubic spline from current pos to 'to' using control1,2
 // Cubic Bézier curves ( a compound curve )
-// B(t)=A(1-t)^3 + 3Bt(1-t)^2 + 3Ct^2(1-t) + Dt^3 , t in [0,1]. 
+// B(t)=A(1-t)^3 + 3Bt(1-t)^2 + 3Ct^2(1-t) + Dt^3 , t in [0,1].
 int Ttt::my_cubic_as_lines(const FT_Vector* control1, const FT_Vector* control2, const FT_Vector *to, void* user)
-{    
+{
     double len;
     extents ext;
     boost::tie(len,ext) = cubic_length(control1,control2,to);
     glyph_extents.add_extents(ext);
-    double dsteps=my_writer->get_cubic_line_subdiv(); 
+    double dsteps=my_writer->get_cubic_line_subdiv();
     int steps = (int) std::max( (double)2, len/dsteps); // at least two steps
     for(int t=1; t<=steps; t++) {
         double tf = (double)t/(double)steps;
-        double x = CUBE(1-tf)*last_point.x     + 
+        double x = CUBE(1-tf)*last_point.x     +
             SQ(1-tf)*3*tf*control1->x   +
             SQ(tf)*(1-tf)*3*control2->x +
             CUBE(tf)*to->x;
-        double y = CUBE(1-tf)*last_point.y     + 
+        double y = CUBE(1-tf)*last_point.y     +
             SQ(1-tf)*3*tf*control1->y   +
             SQ(tf)*(1-tf)*3*control2->y +
             CUBE(tf)*to->y;
-            
+
         P p(x,y);
         line(p);
     }
@@ -450,12 +452,12 @@ void Ttt::biarc(P p0, P ts, P p4, P te, double r) {
 
     P v = p0-p4; // vector from end to start?
 
-    double c = v.dot(v); // 
-    double b = 2 * v.dot( ts*r + te  ); // 
+    double c = v.dot(v); //
+    double b = 2 * v.dot( ts*r + te  ); //
     double a = 2 * r * ( ts.dot(te) -1);
 
     double disc = b*b-4*a*c; // discriminant for solution to quadratic ?
-    
+
     if(a == 0 || disc < 0) { // linear eqn, or no sln to quadratic
         line(p4);
         return;
@@ -465,7 +467,7 @@ void Ttt::biarc(P p0, P ts, P p4, P te, double r) {
     double beta1 = (-b - disq) / 2 / a; // 1st sln to quadratic
     double beta2 = (-b + disq) / 2 / a; // 2nd sln to quadratic
     double beta = std::max(beta1, beta2);
-    
+
     if(beta <= 0) {
         line(p4);
         return;
@@ -473,14 +475,14 @@ void Ttt::biarc(P p0, P ts, P p4, P te, double r) {
 
     double alpha = beta*r;
     double ab = alpha+beta;
-    P p1 = p0 + ts*alpha; 
-    P p3 = p4 + te*(-beta); 
-    P p2 = p1*(beta/ab) + p3*(alpha/ab); 
-    P tm = p3-p2; 
+    P p1 = p0 + ts*alpha;
+    P p3 = p4 + te*(-beta);
+    P p2 = p1*(beta/ab) + p3*(alpha/ab);
+    P tm = p3-p2;
     // the two resulting arcs:
     arc(p0, p2, ts); // arc from p0 to p2
     arc(p2, p4, tm); // arc from p2 to p4
 }
 
 
- 
+

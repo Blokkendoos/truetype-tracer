@@ -22,7 +22,7 @@
 #undef __FTERRORS_H__
 #define FT_ERRORDEF( e, v, s )  { e, s },
 #define FT_ERROR_START_LIST     {
-#define FT_ERROR_END_LIST       { 0, 0 } };
+#define FT_ERROR_END_LIST       { 0, NULL } };
 
 const struct ftError {
   int          err_code;
@@ -39,7 +39,7 @@ void handle_ft_error(std::string where, int f, int x);
 
 // this redirects std::cout to a buffer which we can later output to python
 struct cout_redirect {
-    cout_redirect( std::streambuf* new_buffer ) 
+    cout_redirect( std::streambuf* new_buffer )
         : old( std::cout.rdbuf( new_buffer ) )
     { }
     ~cout_redirect( ) {
@@ -54,7 +54,7 @@ private:
 // a class for the core ttt-algorithm
 // calls the FreeType library to get geometry, and then calls a Writer to produce output
 // FIXME:
-// - make font an adjustabe parameter
+// - make font an adjustable parameter
 class Ttt {
 public:
     Ttt( Writer* wr, std::string str, int unicode , std::string ttfont );
@@ -71,12 +71,12 @@ private:
 
     int my_line_to( const FT_Vector* to, void* user );
     int my_move_to( const FT_Vector* to, void* user );
-    
+
     int        my_conic_to( const FT_Vector* control, const FT_Vector* to, void* user );
     int my_conic_as_biarcs( const FT_Vector* control, const FT_Vector* to, void* user );
     int  my_conic_as_lines( const FT_Vector* control, const FT_Vector* to, void* user );
     std::pair<double,extents> conic_length(const FT_Vector* control, const FT_Vector* to);
-        
+
     int        my_cubic_to(const FT_Vector* control1, const FT_Vector* control2, const FT_Vector *to, void* user);
     int my_cubic_as_biarcs(const FT_Vector* control1, const FT_Vector* control2, const FT_Vector *to, void* user);
     int  my_cubic_as_lines(const FT_Vector* control1, const FT_Vector* control2, const FT_Vector *to, void* user);
@@ -84,20 +84,20 @@ private:
 
     // these static wrappers are required because Freetype wants callback
     // functions to be of (*void) type.
-    static int move_to_wrapper( const FT_Vector* to, void* user ) { self->my_move_to(to,user); }
-    static int line_to_wrapper( const FT_Vector* to, void* user ) { self->my_line_to(to,user); }
+    static int move_to_wrapper( const FT_Vector* to, void* user ) { return self->my_move_to(to,user); }
+    static int line_to_wrapper( const FT_Vector* to, void* user ) { return self->my_line_to(to,user); }
     static int conic_to_wrapper( const FT_Vector* control, const FT_Vector* to, void* user ) { return self->my_conic_dispatch(control,to,user); }
-    static int cubic_to_wrapper( const FT_Vector* control1, 
+    static int cubic_to_wrapper( const FT_Vector* control1,
                                  const FT_Vector* control2,
                                  const FT_Vector *to, void* user ) {
-        self->my_cubic_dispatch(control1, control2, to,user);
+        return self->my_cubic_dispatch(control1, control2, to,user);
     }
-    
+
     // dispatch to native conic output, if writer is capable
     // otherwise approximate as arcs, if writer has arcs
     // otherwise approximate as lines, if writer does not have arcs
     int my_conic_dispatch( const FT_Vector* control, const FT_Vector* to, void* user ) {
-        
+
         P to_pt(to);
         P ctrl_pt(control);
         P last_pt(&last_point);
@@ -111,24 +111,24 @@ private:
         else
             return self->my_conic_as_lines(control,to,user);
     }
-    
+
     // output a cubic as native, arcs, or lines.
-    int my_cubic_dispatch( const FT_Vector* control1, 
+    int my_cubic_dispatch( const FT_Vector* control1,
                                  const FT_Vector* control2,
                                  const FT_Vector *to, void* user ) {
         P ctl1(control1);
         P ctl2(control2);
         P to_pt(to);
         my_writer->cubic_comment(ctl1,ctl2,to_pt);
-    
-        if (my_writer->has_cubic()) 
+
+        if (my_writer->has_cubic())
             return self->my_cubic_to(control1, control2, to,user);
         else if (my_writer->has_arc())
             return self->my_cubic_as_biarcs(control1,control2,to,user);
         else
             return self->my_cubic_as_lines(control1,control2,to,user);
     }
-        
+
     FT_Library library;
     FT_Face face;
     extents line_extents;

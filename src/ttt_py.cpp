@@ -1,6 +1,6 @@
 // experimental c++ port of truetype-tracer
 // January 2012, anders.e.e.wallin "at" gmail.com
-    
+
 #include <boost/python.hpp>
 namespace bp = boost::python;
 
@@ -42,7 +42,7 @@ static std::string ngc1(std::string str) {
 
 static std::string dxf0() {
     return dxf1("Hello World.");
-}   
+}
 
 static std::string ngc0() {
     return ngc1("Hello World.");
@@ -60,16 +60,16 @@ static std::string ttt_with_writer(std::string str, Writer* wr) {
     //delete wr;
     return outp;
 }
- 
+
 BOOST_PYTHON_MODULE(truetypetracer) {
 
     bp::def("version", version);
     bp::def("ngc", ngc0); // zero arguments. "hello world" with all else defaults
     bp::def("ngc", ngc1);
-    
+
     bp::def("dxf", dxf1);
     bp::def("dxf", dxf0);
-    
+
     bp::def("ttt", ttt_with_writer);
     bp::class_<extents>("extents")
         .add_property("minx", &extents::minx)
@@ -77,7 +77,7 @@ BOOST_PYTHON_MODULE(truetypetracer) {
         .add_property("maxy", &extents::maxy)
         .add_property("maxx", &extents::maxx)
     ;
-    bp::class_<Writer, boost::noncopyable>("Writer", bp::no_init) // has pure virtual fnctions 
+    bp::class_<Writer, boost::noncopyable>("Writer", bp::no_init) // has pure virtual functions
         .add_property("arc", &Writer::get_arc, &Writer::set_arc)
         .add_property("conic", &Writer::get_conic, &Writer::set_conic)
         .add_property("cubic", &Writer::get_cubic, &Writer::set_cubic)
